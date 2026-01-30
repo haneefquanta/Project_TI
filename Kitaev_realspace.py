@@ -33,15 +33,9 @@ def Hamiltonian(N,mu,t,p,BC):
 
     return H 
 
-#Diagonalisation
 
-def Diagonalisation(H):
-    evals, evecs = np.linalg.eigh(H)
 
-    return evals
 
-H = Hamiltonian(7,0.5,1,1,0)
-print("Hermitian:", np.allclose(H, H.conj().T))
 
         
 
