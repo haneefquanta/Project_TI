@@ -45,6 +45,9 @@ def transformation(H,N):
     return H_M
 
 
+
+
+
 def build_HM_blocks(N, mu, t, delta, BC, parity):
     
     H_AB = np.zeros((N, N), dtype=complex)

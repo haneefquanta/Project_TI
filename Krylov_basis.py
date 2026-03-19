@@ -5,7 +5,7 @@ from Kitaev_realspace import build_HM_blocks
 from Kitaev_realspace import Hamiltonian
 
 
-mu = 0.5
+mu = 2
 N = 100
 BC = 1
 H = Hamiltonian(N, mu, 1, 1, BC)

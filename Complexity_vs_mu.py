@@ -6,14 +6,15 @@ from Kitaev_realspace import build_HM_blocks
 from Krylov_basis import lanczos
 
 N = 50
-BC = 1
+BC = 0
 O_init = np.zeros(2*N, dtype=complex)
 O_init[0] = 1.0
-mu_values = np.linspace(-5, -1, 30)
+mu_values = np.linspace(-10,10,3)
 K_peak = []
+K_avg_list = []
 
 for mu in mu_values:
-    H_m = build_HM_blocks(N, mu, 1, 1, BC, parity=-1)
+    H_m = build_HM_blocks(N, mu, 2, 2, BC, parity=-1)
     b_coeffs = lanczos(H_m, O_init)
     D = len(b_coeffs) + 1
     sub_diag   = np.diag(b_coeffs, k=-1)
@@ -51,9 +52,10 @@ for mu in mu_values:
     probabilities = np.abs(Phi)**2                    # shape (T, D)
     Complexity    = np.sum(n * probabilities, axis=1) 
     K_peak.append(np.max(Complexity))
+    K_avg_list.append(np.mean(Complexity[t_steps//2:]))
 
 
-plt.plot(mu_values, K_peak)
+plt.plot(mu_values, K_avg_list)
 plt.axvline(x=2, color='red', linestyle='--', label='Critical point |μ|=2J')
 plt.xlabel("μ")
 plt.ylabel("K_peak")

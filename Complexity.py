@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from Kitaev_realspace import build_HM_blocks
 from Krylov_basis import lanczos
 
-mu = 0.5
-N = 100
+mu = 2
+N = 10
 BC = 1
 H_m = build_HM_blocks(N, mu, 1, 1, BC, parity=-1)
 
@@ -23,8 +23,8 @@ M = 1j * (sub_diag + super_diag)   # from i·φ̇ = b_n φ_{n-1} + b_{n+1} φ_{n
 phi0 = np.zeros(D, dtype=complex)
 phi0[0] = 1.0
 
-T       = 1000
-t_steps = 1000
+T       = 100
+t_steps = 100
 t_values = np.linspace(0, T, t_steps)
 
 
