@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Kitaev_realspace import Hamiltonian
 
-N = 20      # system size (large for bulk)
+N = 20    # system size (large for bulk)
 t = 1             # hopping
 Delta = 1         # pairing
 BC = 0   #OBC

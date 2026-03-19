@@ -13,18 +13,21 @@ def Hk(eps, delta_k):
                      [-1j*delta_k, -eps]], dtype=complex)
 
 
-def kitaev_k_space(mu, t, Delta, N_k): 
+def Hamiltonian_Kspace(mu, t, Delta, N_k): 
     ks = np.linspace(-np.pi, np.pi, N_k, endpoint=False) # k = 2*p*n/N_k (N_K is the resolution) 
     energies = np.zeros((N_k,2))    #initiating the energies 
+    vecs = np.zeros((N_k, 2, 2), dtype=complex)  
     for i,k in enumerate(ks):       
         eps = -mu - 2*t*np.cos(k)  # eps = -2tcosk-mu 
         delta_k = 2*Delta*np.sin(k) #delta_k = 2del * sin(k)
-        vals, vecs = np.linalg.eigh(Hk(eps, delta_k))  # Diagonalisation
+        vals, eigvecs = np.linalg.eigh(Hk(eps, delta_k))  # Diagonalisation
         energies[i,:] = np.sort(vals) # each row contain +E and -E  ,#E±​(k)=±(ε(k)**2+Δ(k)**2)**0.5
-    return ks, energies
+        sort_idx = np.argsort(vals)
+        vecs[i, :, :] = eigvecs[:, sort_idx]
+    return ks, energies ,vecs  
 
 
-ks, E = kitaev_k_space(mu,t, Delta, N_k) 
+ks, E , vecs = Hamiltonian_Kspace(mu,t, Delta, N_k) 
 
 plt.figure(figsize=(6,4))
 plt.plot(ks, E[:, 0], 'b', label=r'$E_-(k)$')

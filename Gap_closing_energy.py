@@ -5,8 +5,8 @@ from Kitaev_realspace import Hamiltonian
 N = 50             # system size (large for bulk)
 t = 1.0              # hopping
 Delta = 0.6          # pairing
-BC = 1
-
+BC = 1   # For finding bulk gap we use PBC as it as a bulk property
+ 
 
 
 mu_list = np.linspace(-4.0, 4.0, 401)  # sweep chemical potential
