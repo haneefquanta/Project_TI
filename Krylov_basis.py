@@ -5,13 +5,12 @@ from Kitaev_realspace import build_HM_blocks
 from Kitaev_realspace import Hamiltonian
 
 
-mu = 2
+mu = 3
 N = 100
 BC = 1
-H = Hamiltonian(N, mu, 1, 1, BC)
-H_m= build_HM_blocks(N, mu, 1, 1, BC, parity=1)
+H_m= build_HM_blocks(N, mu, 1, 1, BC, parity=-1)
 O_init = np.zeros(2*N, dtype=complex)
-O_init[0] = 1.0
+O_init[0] = 1
 
 def lanczos(H, O_init):
     dim = H.shape[0]
@@ -26,7 +25,7 @@ def lanczos(H, O_init):
     krylov_basis.append(O_n.copy())
     O_prev = np.zeros(dim)    # O_{-1} = 0
     
-    for n in range(dim):
+    for n in range(dim*dim):
         # apply L = i * H_M
         A = 2 * H @ O_n * 1j
         
@@ -36,7 +35,11 @@ def lanczos(H, O_init):
         
         # subtract projections
         A = A - a_n * O_n - b_coeffs[n] * O_prev 
-        
+        for O_k in krylov_basis:   # ALL vectors, not [-window:]
+            A = A - np.sum(O_k.conj() * A) * O_k
+        for O_k in krylov_basis:   # double pass
+            A = A - np.sum(O_k.conj() * A) * O_k
+
         # off-diagonal coefficient
         b_next = np.linalg.norm(A)
         
@@ -58,7 +61,8 @@ betas = b_coeffs
 n = np.arange(1, len(betas) + 1)
 
 fig, ax = plt.subplots(figsize=(8, 4))
-
+ax.set_xscale('log')
+ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'$10^{{{int(np.log10(x))}}}$'))
 ax.plot(n[0::2], betas[0::2], 'o-', color='coral',   label='odd $b_n$',  markersize=5)
 ax.plot(n[1::2], betas[1::2], 's-', color='steelblue', label='even $b_n$', markersize=5)
 

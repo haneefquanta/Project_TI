@@ -3,18 +3,19 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from Kitaev_realspace import build_HM_blocks
-from Krylov_basis import lanczos
+from two_body_basis import lanczos
 
 N = 50
 BC = 0
-O_init = np.zeros(2*N, dtype=complex)
-O_init[0] = 1.0
-mu_values = np.linspace(-10,10,3)
+O_init = np.zeros((2*N,2*N), dtype=complex)
+O_init[0,N] = -1
+O_init[N,0] = 1
+mu_values = np.linspace(0.5,4,8)
 K_peak = []
 K_avg_list = []
 
 for mu in mu_values:
-    H_m = build_HM_blocks(N, mu, 2, 2, BC, parity=-1)
+    H_m = build_HM_blocks(N, mu, 1, 1, BC, parity=-1)
     b_coeffs = lanczos(H_m, O_init)
     D = len(b_coeffs) + 1
     sub_diag   = np.diag(b_coeffs, k=-1)
@@ -23,8 +24,8 @@ for mu in mu_values:
 
     phi0 = np.zeros(D, dtype=complex)
     phi0[0] = 1.0
-    T       = 2000
-    t_steps = 100
+    T       = 400
+    t_steps = 400
     t_values = np.linspace(0, T, t_steps)
 
     # ── RHS for solve_ivp ─────────────────────────────────────────

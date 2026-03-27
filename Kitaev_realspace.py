@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 
-#N--> Lattice Sites , mu --> on site potential, BC - Boundary condition
+#N > Lattice Sites , mu --> on site potential, BC - Boundary condition
 def Hamiltonian(N,mu,t,p,BC):
     #single particle Hamiltonian
     h = np.zeros((N,N),dtype=complex)
