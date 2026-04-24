@@ -18,6 +18,7 @@ W2 = evecs[:, mzm_indices[1]]
 v1 = W1[:N]
 v2 = W2[:N]
 u1 = W1[N:]   
+
 u2 = W2[N:]
 prob_density_1 = np.abs(u1)**2 + np.abs(v1)**2
 prob_density_2 = np.abs(u2)**2 + np.abs(v2)**2
