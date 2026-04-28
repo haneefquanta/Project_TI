@@ -76,6 +76,34 @@ def build_HM_blocks(N, mu, t, delta, BC, parity):
     return H_m
 
  
+def build_disordered_kitaev(N, mu, t, delta, BC,parity , disorder_strength):
+    
+
+    W = disorder_strength
+    H_AB = np.zeros((N, N), dtype=complex)
+    mu_i = mu + W * np.random.uniform(-1, 1, N)
+    # On-site (diagonal of H_AB)
+    for j in range(N):
+        H_AB[j, j] = -mu_i[j] / 2  
+
+    
+    for j in range(N-1):
+        H_AB[j,   j+1] = (delta - t)/2    # A_j  → B_{j+1}
+        H_AB[j+1, j  ] = -(t + delta)/2 # A_{j+1} → B_j (from H_BA = -H_AB^T)
+
+    # PBC corner terms
+    if BC == 1:  
+        H_AB[N-1, 0] = -1*parity * (delta - t)/2
+        H_AB[0, N-1] = -1*parity * -(t + delta)/2 
+
+    # Full H_M
+    H_m = np.block([[np.zeros((N,N)),  H_AB          ],
+                    [-H_AB.T,          np.zeros((N,N))]])
+
+
+  
+
+    return H_m
 
 
 
