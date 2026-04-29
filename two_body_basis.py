@@ -6,7 +6,8 @@ from scipy.optimize import curve_fit          # ← add here at the top
 
 
 
-mu_values =np.linspace(0,10,100)
+mu_values =np.linspace(-4,4,100)
+
 #mu_values = [0.2,2,2.2,2.3,2.4,2.5,2.6,2.7,2.8 ,2.9 ,3,4]
 t= 1
 delta = 1
@@ -15,9 +16,9 @@ N = 30
 BC = 1
 O_init = np.zeros((2*N,2*N), dtype=complex)
 site = 0    # mi
-w = N
+w = 30
 #w =50
-D = 0.1
+D = 0
 epsilon = 0
 
 O_first = np.zeros((2*N,2*N), dtype=complex)
@@ -70,8 +71,8 @@ def lanczos(H, O_init,window=w):
         #   reorthogonalization 
         for O_k in krylov_basis[-window:]: 
             A = A - np.sum(O_k.conj() * A) * O_k
-        for O_k in krylov_basis[-window:]:   
-            A = A - np.sum(O_k.conj() * A) * O_k
+        #for O_k in krylov_basis[-window:]:   
+           # A = A - np.sum(O_k.conj() * A) * O_k
         
         
         b_next = np.linalg.norm(A)
@@ -204,7 +205,7 @@ plt.show()
 
 
 
-# %%
+
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -418,88 +419,107 @@ phi_plot[valid] -= phi_arr[valid][0]
 # 5. COLOUR MAP SETUP
 # ═══════════════════════════════════════════════════════════════
 
-critical_band = (1.8, 2.2)
+mu_c        = 2 * t          # critical point magnitude
+crit_margin = 0.2 * t        # band half-width around ±2t
 
-topo_mus    = [mu for mu in results.keys() if mu < critical_band[0]]
-trivial_mus = [mu for mu in results.keys() if mu > critical_band[1]]
+def _phase(mu):
+    if abs(abs(mu) - mu_c) <= crit_margin:   # near +2t or -2t
+        return 'critical'
+    elif abs(mu) < mu_c:
+        return 'topo'
+    else:
+        return 'trivial'
+
+topo_mus    = [mu for mu in results.keys() if _phase(mu) == 'topo']
+trivial_mus = [mu for mu in results.keys() if _phase(mu) == 'trivial']
 
 topo_cmap = mcolors.LinearSegmentedColormap.from_list(
     'topo', ['#2d006b', '#6a00cc', '#aa44ff', '#dd99ff']
 )
 topo_norm = mcolors.Normalize(
-    vmin=min(topo_mus) if topo_mus else 0,
-    vmax=max(topo_mus) if topo_mus else 1,
+    vmin=min(topo_mus) if topo_mus else -mu_c,
+    vmax=max(topo_mus) if topo_mus else  mu_c,
 )
 
 trivial_cmap = mcolors.LinearSegmentedColormap.from_list(
     'trivial', ['#fff176', '#ffd600', '#f9a825', '#6b4000']
 )
 trivial_norm = mcolors.Normalize(
-    vmin=min(trivial_mus) if trivial_mus else 0,
-    vmax=max(trivial_mus) if trivial_mus else 1,
+    vmin= mu_c,
+    vmax=max(trivial_mus) if trivial_mus else mu_c * 3,
 )
 
 def get_color(mu):
-    if critical_band[0] <= mu <= critical_band[1]:
+    phase = _phase(mu)
+    if phase == 'critical':
         return 'black'
-    elif mu < critical_band[0]:
+    elif phase == 'topo':
         return topo_cmap(topo_norm(mu))
     else:
-        return trivial_cmap(trivial_norm(mu))
+        return trivial_cmap(trivial_norm(abs(mu)))  # symmetric for ±trivial
 
 legend_entries = [
-    mpatches.Patch(color='#6a00cc', label=r'Topological ($\mu < 2t$) — dark→light violet'),
-    mpatches.Patch(color='black',   label=r'Critical region ($1.8 \leq \mu \leq 2.2$)'),
-    mpatches.Patch(color='#ffd600', label=r'Trivial ($\mu > 2t$) — light→dark yellow'),
+    mpatches.Patch(color='#6a00cc', label=r'Topological ($|\mu| < 2t$) — dark→light violet'),
+    mpatches.Patch(color='black',   label=r'Critical region (near $\mu = \pm 2t$)'),
+    mpatches.Patch(color='#ffd600', label=r'Trivial ($|\mu| > 2t$) — light→dark yellow'),
 ]
-
 
 # ═══════════════════════════════════════════════════════════════
 # 6. PLOT
 # ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════
+# 6. PLOT
+# ═══════════════════════════════════════════════════════════════
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+# ── Plot 1: Phase ─────────────────────────────────────────────
+fig1, ax1 = plt.subplots(figsize=(8, 5))
 
-# ── Panel 1: Phase ────────────────────────────────────────────
 ax1.plot(mu_arr[valid], phi_plot[valid],
          '-', color='gray', lw=0.8, alpha=0.5, zorder=1)
 for mu, phi in zip(mu_arr[valid], phi_plot[valid]):
     ax1.scatter(mu, phi, color=get_color(mu), s=20, zorder=3)
 
-ax1.axvline(2.0, color='red',  ls='--', lw=1.2, label=r'$\mu = 2t$')
-ax1.axhline(0,   color='gray', ls=':',  lw=1.0)
-ax1.axvspan(mu_arr.min(), 2.0, alpha=0.06, color='purple', label='Topological')
-ax1.axvspan(2.0, mu_arr.max(), alpha=0.06, color='yellow',  label='Trivial')
+ax1.axvline( mu_c, color='red', ls='--', lw=1.2, label=r'$\mu = +2t$')
+ax1.axvline(-mu_c, color='red', ls='--', lw=1.2, label=r'$\mu = -2t$')
+ax1.axhline(0, color='gray', ls=':', lw=1.0)
+ax1.axvspan(-mu_c, mu_c,        alpha=0.06, color='purple', label='Topological')
+ax1.axvspan( mu_c, mu_arr.max(), alpha=0.06, color='yellow', label='Trivial')
+ax1.axvspan(mu_arr.min(), -mu_c, alpha=0.06, color='yellow')
 
 pi_ticks = np.array([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
 ax1.set_yticks(pi_ticks)
 ax1.set_yticklabels([r'$-\pi$', r'$-\pi/2$', r'$0$', r'$\pi/2$', r'$\pi$'], fontsize=10)
 ax1.set_xlabel(r'$\mu$',              fontsize=13)
 ax1.set_ylabel(r'$\Delta\phi$ (rad)', fontsize=13)
-ax1.set_title(rf'Phase shift $\Delta\phi$ vs $\mu$ — $N={N}$ sites', fontsize=12)
-ax1.legend(handles=legend_entries, fontsize=8, loc='upper right', framealpha=0.88)
+ax1.set_title(rf'Phase shift $\Delta\phi$ vs $\mu$ — $N={N}$ sites', fontsize=13)
+ax1.legend(handles=legend_entries, fontsize=8, loc='lower right', framealpha=0.88)
 ax1.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig("phase_vs_mu.png", dpi=150, bbox_inches='tight')
+plt.show()
 
-# ── Panel 2: Amplitude ────────────────────────────────────────
+# ── Plot 2: Amplitude ─────────────────────────────────────────
+fig2, ax2 = plt.subplots(figsize=(8, 5))
+
 ax2.plot(mu_arr[valid], amp_arr[valid],
          '-', color='gray', lw=0.8, alpha=0.5, zorder=1)
 for mu, amp in zip(mu_arr[valid], amp_arr[valid]):
     ax2.scatter(mu, amp, color=get_color(mu), s=20, zorder=3)
 
-ax2.axvline(2.0, color='red',  ls='--', lw=1.2)
-ax2.axhline(0,   color='gray', ls=':',  lw=1.0)
-ax2.axvspan(mu_arr.min(), 2.0, alpha=0.06, color='purple')
-ax2.axvspan(2.0, mu_arr.max(), alpha=0.06, color='yellow')
+ax2.axvline( mu_c, color='red', ls='--', lw=1.2, label=r'$\mu = +2t$')
+ax2.axvline(-mu_c, color='red', ls='--', lw=1.2, label=r'$\mu = -2t$')
+ax2.axhline(0, color='gray', ls=':', lw=1.0)
+ax2.axvspan(-mu_c, mu_c,        alpha=0.06, color='purple', label='Topological')
+ax2.axvspan( mu_c, mu_arr.max(), alpha=0.06, color='yellow', label='Trivial')
+ax2.axvspan(mu_arr.min(), -mu_c, alpha=0.06, color='yellow')
 
 ax2.set_xlabel(r'$\mu$', fontsize=13)
 ax2.set_ylabel(r'$A$',   fontsize=13)
-ax2.set_title(rf'Fitted amplitude $A$ vs $\mu$ — $N={N}$ sites', fontsize=12)
-ax2.legend(handles=legend_entries, fontsize=8, loc='upper right', framealpha=0.88)
+ax2.set_title(rf'Fitted amplitude $A$ vs $\mu$ — $N={N}$ sites', fontsize=13)
+ax2.legend(handles=legend_entries, fontsize=8, loc='lower right', framealpha=0.88)
 ax2.grid(True, alpha=0.3)
-
-fig.suptitle(rf'Sine fit diagnostics — Kitaev chain, $N={N}$ sites', fontsize=13, y=1.02)
 plt.tight_layout()
-plt.savefig("phi_and_amplitude_vs_mu.png", dpi=150, bbox_inches='tight')
+plt.savefig("amplitude_vs_mu.png", dpi=150, bbox_inches='tight')
 plt.show()
 # %%
 # ══════════════════════════════════════════════
