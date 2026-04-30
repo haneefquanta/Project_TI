@@ -13,7 +13,7 @@ t= 1
 delta = 1
 
 N = 30
-BC = 1
+BC = 0
 O_init = np.zeros((2*N,2*N), dtype=complex)
 site = 0    # mi
 w = 30
