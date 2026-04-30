@@ -15,13 +15,13 @@ from scipy.stats import sigmaclip
 # ═══════════════════════════════════════════════════════════════
 
 v = 1                             # intracell hopping (fixed)
-w_values = np.linspace(0.1, 4.0, 100)   # sweep intercell hopping w
+w_values = np.linspace(0.1, 8, 100)   # sweep intercell hopping w
                                           # transition at w = v = 1.0
 N  = 30
-BC = 1
-w_window = 20    # Krylov window
-D = 0          # disorder strength
-epsilon = 0         # TRS-breaking imaginary hopping (0 = clean)
+BC = 0
+w_window = 30 # Krylov window
+D = 0       # disorder strength
+epsilon = 1    # TRS-breaking imaginary hopping (0 = clean)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -203,7 +203,7 @@ def fit_sine_full(b, k_candidates=5):
 
 
 # ═══════════════════════════════════════════════════════════════
-# MAIN LOOP  ← same structure, w replaces mu
+# MAIN LOOP 
 # ═══════════════════════════════════════════════════════════════
 
 results = {}
@@ -239,8 +239,11 @@ amp_arr = np.array([
 ])
 
 valid    = ~np.isnan(phi_arr)
-phi_plot = phi_arr.copy()
-phi_plot[valid] -= phi_arr[valid][0]    # first point = reference 0
+phi_unwrapped = phi_arr.copy()
+phi_unwrapped[valid] = np.unwrap(phi_arr[valid])
+phi_plot = phi_unwrapped.copy()
+phi_plot[valid] -= phi_unwrapped[valid][0]
+   # first point = reference 0
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -306,7 +309,6 @@ ax_bn.set_ylabel(r'$\mathrm{normalised}\ b_n$', fontsize=13)
 ax_bn.set_title(rf'SSH chain: Lanczos coefficients $b_n$ — $N={N}$, BC: {BC}', fontsize=12)
 ax_bn.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig("bn_vs_n_SSH.png", dpi=150, bbox_inches='tight')
 plt.show()
 # ═══════════════════════════════════════════════════════════════
 # PLOT  ← identical to your Kitaev plot, axis labels updated
@@ -314,6 +316,8 @@ plt.show()
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
 
+
+print(phi_plot)
 # ── Panel 1: Phase ────────────────────────────────────────────
 ax1.plot(w_arr[valid], phi_plot[valid],
          '-', color='gray', lw=0.8, alpha=0.5, zorder=1)
@@ -330,7 +334,7 @@ ax1.set_yticks(pi_ticks)
 ax1.set_yticklabels([r'$-\pi$', r'$-\pi/2$', r'$0$', r'$\pi/2$', r'$\pi$'], fontsize=10)
 ax1.set_xlabel(r'$w$ (intercell hopping)', fontsize=13)
 ax1.set_ylabel(r'$\Delta\phi$ (rad)',       fontsize=13)
-ax1.set_title(rf'SSH chain: Phase $\Delta\phi$ vs $w$ — $N={N}$ sites', fontsize=12)
+ax1.set_title(rf'SSH chain WITH TRS BROKEN: Phase $\Delta\phi$ vs $w$ — $N={N}$ sites', fontsize=12)
 ax1.legend(handles=legend_entries, fontsize=8, loc='upper right', framealpha=0.88)
 ax1.grid(True, alpha=0.3)
 
@@ -354,7 +358,89 @@ ax2.grid(True, alpha=0.3)
 fig.suptitle(rf'SSH chain — Krylov sine fit diagnostics, $v={v}$, $N={N}$ sites',
              fontsize=13, y=1.02)
 plt.tight_layout()
-plt.savefig("phi_and_amplitude_vs_w_SSH.png", dpi=150, bbox_inches='tight')
 plt.show()
+
+# %%
+
+# ═══════════════════════════════════════════════════════════════
+# EPSILON SWEEP — phase shift vs w for different TRS-breaking
+# ═══════════════════════════════════════════════════════════════
+
+epsilon_values = np.linspace(0,1,10)
+
+# colour map for epsilon curves — dark blue (eps=0) to dark red (eps=2)
+eps_cmap = mcolors.LinearSegmentedColormap.from_list(
+    'eps', ['#00008b', '#4444ff', '#44aaff', '#44ffaa',
+            '#ffaa00', '#ff4400', '#cc0000', '#660000']
+)
+eps_norm = mcolors.Normalize(vmin=min(epsilon_values),
+                              vmax=max(epsilon_values))
+
+fig_eps, ax_eps = plt.subplots(figsize=(10, 6))
+
+for eps in epsilon_values:
+    print(f"\nRunning epsilon = {eps:.2f} ...")
+    
+    results_eps = {}
+    for w in w_values:
+        H   = build_ssh(N, v, w, BC=BC, W=D, epsilon=eps)
+        b, _ = lanczos(H, O_init, window=w_window)
+        scale = np.sqrt(v**2 + w**2)
+        b_trimmed = b[3:] / scale          # trim transient + normalise
+        results_eps[w] = b_trimmed
+        
+    # fit sine for each w
+    phi_eps = []
+    for w in w_values:
+        fr = fit_sine_full(np.array(results_eps[w]))
+        phi_eps.append(fr['params'][2] if fr is not None else np.nan)
+    
+    phi_eps = np.array(phi_eps)
+    valid_eps = ~np.isnan(phi_eps)
+    
+    # unwrap and reference to first valid point
+    phi_eps[valid_eps] = np.unwrap(phi_eps[valid_eps])
+    phi_eps[valid_eps] -= phi_eps[valid_eps][0]
+    
+    color = eps_cmap(eps_norm(eps))
+    ax_eps.plot(w_values[valid_eps], phi_eps[valid_eps],
+                '-o', color=color, markersize=3, linewidth=1.5,
+                label=rf'$\epsilon = {eps}$', alpha=0.85)
+
+ax_eps.axvline(v, color='red', ls='--', lw=1.5, label=r'$w = v$ (clean transition)')
+ax_eps.axhline(0, color='gray', ls=':', lw=1.0)
+ax_eps.axvspan(w_values.min(), v, alpha=0.05, color='yellow', label='Trivial')
+ax_eps.axvspan(v, w_values.max(), alpha=0.05, color='purple', label='Topological')
+
+pi_ticks = np.array([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+ax_eps.set_yticks(pi_ticks)
+ax_eps.set_yticklabels([r'$-\pi$', r'$-\pi/2$', r'$0$', r'$\pi/2$', r'$\pi$'], fontsize=10)
+
+ax_eps.set_xlabel(r'$w$ (intercell hopping)', fontsize=13)
+ax_eps.set_ylabel(r'$\Delta\phi$ (rad)',       fontsize=13)
+ax_eps.set_title(rf'Phase shift $\Delta\phi$ vs $w$ for varying TRS-breaking $\epsilon$ — SSH, $N={N}$ for v =1',
+                 fontsize=12)
+# remove the per-curve legend entries, use a colorbar instead
+sm = cm.ScalarMappable(cmap=eps_cmap, norm=eps_norm)
+sm.set_array([])
+
+cbar = fig_eps.colorbar(sm, ax=ax_eps, pad=0.02)
+cbar.set_label(r'TRS-breaking $\epsilon$', fontsize=12)
+cbar.set_ticks(epsilon_values)
+cbar.set_ticklabels([f'{e:.1f}' for e in epsilon_values], fontsize=9)
+
+# keep only the region and transition line in the legend
+ax_eps.legend(
+    handles=[
+        mpatches.Patch(color='purple', alpha=0.3, label='Topological ($w > v$)'),
+        mpatches.Patch(color='yellow', alpha=0.3, label='Trivial ($w < v$)'),
+        plt.Line2D([0], [0], color='red', ls='--', lw=1.5, label=r'$w = v$ (transition)'),
+    ],
+    fontsize=10, loc='upper left', framealpha=0.88
+)
+ax_eps.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
 
 # %%
